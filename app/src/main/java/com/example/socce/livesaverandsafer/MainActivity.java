@@ -15,6 +15,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.net.Uri;
 import android.os.PowerManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -22,6 +23,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.telephony.SmsManager;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -31,24 +33,21 @@ import com.google.android.gms.tasks.RuntimeExecutionException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+public class MainActivity extends AppCompatActivity {
 
+    private static final int WAITING_TIME = 1000;
     final int LOC_REQ_CODE = 42;
     final int PHONE_REQ_CODE = 999;
     final int SMS_REQ_CODE = 535;
-    final int BLUETOOTH_ENABLE_CODE = 423;
-    final String HELMET_NAME = "HELMET";
-    final int WAITING_TIME = 100;
-    private Map<String, String> devicesFound =  new HashMap<>();
     static boolean termination;
-    private final String SERVICE_UUID = "00005301-0000-0041-4C50-574953450000";
-    private final String WRITE_UUID = "00005302-0000-0041-4C50-574953450000";
-    private final String READ_UUID = "00005303-0000-0041-4C50-574953450000";
+    private final String judgeNo = "tel:+4915120774296";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,119 +70,68 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     new String[]{Manifest.permission.SEND_SMS}, SMS_REQ_CODE);
         }
 
-        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if(bluetoothAdapter==null){
-            Log.e("no bt","no bt");
-            System.exit(0);
-        }
-        if(! bluetoothAdapter.isEnabled()){
-            Intent enableBlueTooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBlueTooth,BLUETOOTH_ENABLE_CODE);
-        }
-
-        // Bluetooth is now enabled above
-        BluetoothDevice device=null;
+        myDatagramReceiver = new MyDatagramReceiver();
+        myDatagramReceiver.start();
         try {
-            String s = bluetoothActions(bluetoothAdapter);
-            device = bluetoothAdapter.getRemoteDevice(s);
-        }
-        catch (Exception e){
-            Log.e("Not found","Not found");
-        }
-        PowerManager mgr = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        PowerManager.WakeLock wakeLock = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyWakeLock");
-
-        BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback(){
-
-            @Override
-            public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-                Log.d("1","1");
-            }
-
-            public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-                Log.d("1","1");
-
-                BluetoothGattService service = gatt.getService(UUID.fromString(SERVICE_UUID));
-
-                BluetoothGattCharacteristic read = service.getCharacteristic(UUID.fromString(READ_UUID));
-                gatt.setCharacteristicNotification(read,true);
-
-
-                BluetoothGattCharacteristic write = service.getCharacteristic(UUID.fromString(WRITE_UUID));
-                int i =write.getProperties();
-                write.setWriteType(2);
-                write.setValue("start");
-                gatt.writeCharacteristic(write);
-                Log.d("Done","Done");
-            }
-
-            public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-                Log.d("1","1");
-            }
-
-            public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-                Log.d("1","1");
-            }
-
-            public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-                Log.d("1","1");
-            }
-
-            public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-                Log.d("1","1");
-            }
-
-            public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-                Log.d("1","1");
-            }
-
-            public void onReliableWriteCompleted(BluetoothGatt gatt, int status) {
-                Log.d("1","1");
-            }
-
-            public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
-                Log.d("1","1");
-            }
-
-            public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
-                Log.d("1","1");
-            }
-
-        };
-        BluetoothGatt btGatt = null;
-        if(device!=null) {
-            btGatt = device.connectGatt(this, false, bluetoothGattCallback);
-        }
-        else {
-            Log.d("Error","No Device");
-            return;
-        }
-        try {
-            btGatt.connect();
-        } catch (Exception e) {
+            myDatagramReceiver.join();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        if(myDatagramReceiver.getMessage().equals("hello")){
+            SmsManager manager = SmsManager.getDefault();
+            manager.sendTextMessage(judgeNo,null,"Incident at St Gallen University",null,null);
 
-        // Declare emergencyOccurenceService
-        /*while(! termination){
-            wakeLock.acquire();
-//            Intent intent = new Intent(Intent.)
-            // Get Data from BluetoothDevice
-            btGatt.readCharacteristic(read);
-            byte[] value = read.getValue();
-            // String readPastTense = read.getStringValue(0); // Is this null?
-            Log.d("Test","Test");
-            // If data ! null, Do code here for if incident happens
-            // Write Data to text file for research !!
-            wakeLock.release();
-            try {
-                wait(WAITING_TIME);
-            }
-            catch (InterruptedException e){
-                Log.e("Error","Time Interrupted");
-            }
-        }*/
+            Intent calling = new Intent(Intent.ACTION_CALL, Uri.parse(judgeNo));
+            startActivity(calling);
+
+            System.exit(0);
+        }
+
+//        PowerManager mgr = (PowerManager) getSystemService(Context.POWER_SERVICE);
+//        PowerManager.WakeLock wakeLock = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyWakeLock");
+//        EmergencyOccurenceService eos = new EmergencyOccurenceService();
+//        wakeLock.acquire();
+//        while(! termination){
+//            // Get Data from BluetoothDevice
+//            if(dataAffirmative){
+//                eos.onHandleIntent(new Intent("Accident"));
+//            }
+//            try {
+//                wait(WAITING_TIME);
+//            }
+//            catch (InterruptedException e){
+//                Log.e("Error","Time Interrupted");
+//            }
+//            if(Math.random()>0.87){
+//                dataAffirmative = true;
+//            }
+//        }
+//        wakeLock.release();
     }
+
+    private MyDatagramReceiver myDatagramReceiver = null;
+
+    protected void onResume() {
+        super.onResume();
+//        myDatagramReceiver = new MyDatagramReceiver();
+//        myDatagramReceiver.start();
+//        try {
+//            myDatagramReceiver.join();
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+//        if(myDatagramReceiver.getMessage().equals("Hello")){
+//            SmsManager manager = SmsManager.getDefault();
+//            manager.sendTextMessage("+972545877122",null,"incident",null,null);
+//            Log.v("Sent","Success");
+//        }
+    }
+
+    protected void onPause() {
+        super.onPause();
+        myDatagramReceiver.kill();
+    }
+
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults){
@@ -217,66 +165,5 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    private String bluetoothActions(BluetoothAdapter bluetoothAdapter) throws Resources.NotFoundException {
-        String address = queryKnown(bluetoothAdapter);
-        if(address.equals("")){
-            address = discover(bluetoothAdapter);
-        }
-        if(address.equals("")){
-            throw new Resources.NotFoundException("Device is not available!");
-        }
-        return address;
-    }
 
-    private String queryKnown(BluetoothAdapter bluetoothAdapter){
-        Set<BluetoothDevice> devices = bluetoothAdapter.getBondedDevices();
-        for(BluetoothDevice device : devices){
-            String devName = device.getName();
-            String devMacAdd = device.getAddress();
-            if(devName.equals(HELMET_NAME)){
-                return devMacAdd;
-            }
-        }
-        return "";
-    }
-
-    private String discover(final BluetoothAdapter bluetoothAdapter){
-        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(receiver,filter);
-        bluetoothAdapter.startDiscovery();
-        if(devicesFound.containsKey(HELMET_NAME)){
-            return devicesFound.get(HELMET_NAME);
-        }
-        unregisterReceiver(receiver);
-        bluetoothAdapter.cancelDiscovery();
-        return "";
-    }
-
-    private final BroadcastReceiver receiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                String deviceName = device.getName();
-                String deviceHardwareAddress = device.getAddress(); // MAC address
-                devicesFound.put(deviceName,deviceHardwareAddress);
-            }
-        }
-    };
-
-    @Override
-    public void onConnected(@Nullable Bundle bundle) {
-
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-
-    }
-
-    @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
-    }
 }
