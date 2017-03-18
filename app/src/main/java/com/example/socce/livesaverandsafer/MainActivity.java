@@ -9,16 +9,23 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.location.Location;
+import android.net.Uri;
+import android.os.PowerManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.telephony.SmsManager;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,6 +40,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     final int BLUETOOTH_ENABLE_CODE = 423;
     final String HELMET_NAME = "HELMET";
     private Map<String, String> devicesFound =  new HashMap<>();
+    static boolean termination;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +62,33 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.SEND_SMS}, SMS_REQ_CODE);
         }
+
+        //Test
+//        GoogleApiClient apiClient = new GoogleApiClient.Builder(this)
+//                .addConnectionCallbacks((GoogleApiClient.ConnectionCallbacks) this)
+//                .addOnConnectionFailedListener((GoogleApiClient.OnConnectionFailedListener) this)
+//                .addApi(LocationServices.API)
+//                .build();
+//        apiClient.isConnected();
+//        LocationRequest locReq = new LocationRequest().setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+//        LocationListener listener = new LocationListener() {
+//            @Override
+//            public void onLocationChanged(Location location) {
+//
+//            }
+//        };
+//        LocationServices.FusedLocationApi.requestLocationUpdates(apiClient,locReq,listener);
+//        Location location = LocationServices.FusedLocationApi.getLastLocation(apiClient);
+//        if(location==null){
+//            // TODO requestLocationUpdates
+//        }
+//        double longt = location.getLongitude();
+//        double langt = location.getLatitude();
+//        double alt = location.getAltitude();
+//        String incident = "Incident at Long(" + longt + "), Lang(" + langt + ") & alt(" + alt + ")";
+//        Log.v("test", incident);
+        //Test
+
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter==null){
             Log.e("no bt","no bt");
@@ -64,11 +99,26 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             startActivityForResult(enableBlueTooth,BLUETOOTH_ENABLE_CODE);
         }
         // Bluetooth is now enabled above
+        BluetoothDevice device = null;
         try {
-            bluetoothActions(bluetoothAdapter);
+            String s = bluetoothActions(bluetoothAdapter);
+            // TODO use string, device = bluetoothActions(bluetoothAdapter);
         }
         catch (Exception e){
             Log.e("Not found","Not found");
+        }
+        PowerManager mgr = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        PowerManager.WakeLock wakeLock = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyWakeLock");
+        if(device!=null){
+
+        }
+        // Declare emergencyOccurenceService
+        while(termination){
+            wakeLock.acquire();
+//            Intent intent = new Intent(Intent.)
+            // Get Data from BluetoothDevice
+            // If data ! null, Do code here for if incident happens
+            wakeLock.release();
         }
     }
 
@@ -104,7 +154,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    private void bluetoothActions(BluetoothAdapter bluetoothAdapter) throws Resources.NotFoundException {
+    private String bluetoothActions(BluetoothAdapter bluetoothAdapter) throws Resources.NotFoundException {
         String address = queryKnown(bluetoothAdapter);
         if(address.equals("")){
             address = discover(bluetoothAdapter);
@@ -112,7 +162,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if(address.equals("")){
             throw new Resources.NotFoundException("Device is not available!");
         }
-        //Connect time
+        return address;
     }
 
     private String queryKnown(BluetoothAdapter bluetoothAdapter){
@@ -131,19 +181,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
         registerReceiver(receiver,filter);
         bluetoothAdapter.startDiscovery();
-//        try {
-//            wait(1300);
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
         if(devicesFound.containsKey(HELMET_NAME)){
             return devicesFound.get(HELMET_NAME);
         }
         unregisterReceiver(receiver);
+        bluetoothAdapter.cancelDiscovery();
         return "";
     }
 
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
+        @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
@@ -155,7 +202,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     };
 
-    private void connect(BluetoothAdapter bluetoothAdapter){
+    private void connect(BluetoothAdapter bluetoothAdapter, String address){
 
     }
 

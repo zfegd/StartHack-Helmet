@@ -24,9 +24,6 @@ public class EmergencyOccurenceService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-
-
-
         // DO below if there is an incident
         if(apiClient==null){
             apiClient = new GoogleApiClient.Builder(this)
@@ -35,6 +32,7 @@ public class EmergencyOccurenceService extends IntentService {
                     .addApi(LocationServices.API)
                     .build();
         }
+        apiClient.connect();
         LocationRequest locReq = new LocationRequest().setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         LocationListener listener = new LocationListener() {
             @Override
@@ -54,7 +52,7 @@ public class EmergencyOccurenceService extends IntentService {
 
         Intent calling = new Intent(Intent.ACTION_CALL, Uri.parse("tel:+972545877122"));
         startActivity(calling);
-
+        MainActivity.termination = false;
         }
 
 
