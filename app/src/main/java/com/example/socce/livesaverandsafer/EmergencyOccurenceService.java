@@ -17,6 +17,7 @@ import com.google.android.gms.maps.model.LatLng;
 public class EmergencyOccurenceService extends IntentService {
 
     private GoogleApiClient apiClient;
+    private final String judgeNo = "tel:+491512"; //TODO
 
     public EmergencyOccurenceService(String name) {
         super(name);
@@ -24,7 +25,7 @@ public class EmergencyOccurenceService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        // DO below if there is an incident
+        // TODO below if there is an incident
         if(apiClient==null){
             apiClient = new GoogleApiClient.Builder(this)
                     .addConnectionCallbacks((GoogleApiClient.ConnectionCallbacks) this)
@@ -40,6 +41,7 @@ public class EmergencyOccurenceService extends IntentService {
 
             }
         };
+        // TODO request Location Updates
         LocationServices.FusedLocationApi.requestLocationUpdates(apiClient,locReq,listener);
         Location location = LocationServices.FusedLocationApi.getLastLocation(apiClient);
         double longt = location.getLongitude();

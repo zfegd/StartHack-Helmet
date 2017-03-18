@@ -3,14 +3,18 @@ package com.example.socce.livesaverandsafer;
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
+import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
-import android.location.Location;
-import android.net.Uri;
 import android.os.PowerManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -18,19 +22,19 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.telephony.SmsManager;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.RuntimeExecutionException;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
@@ -39,8 +43,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     final int SMS_REQ_CODE = 535;
     final int BLUETOOTH_ENABLE_CODE = 423;
     final String HELMET_NAME = "HELMET";
+    final int WAITING_TIME = 100;
     private Map<String, String> devicesFound =  new HashMap<>();
     static boolean termination;
+    private final String SERVICE_UUID = "00005301-0000-0041-4C50-574953450000";
+    private final String WRITE_UUID = "00005302-0000-0041-4C50-574953450000";
+    private final String READ_UUID = "00005303-0000-0041-4C50-574953450000";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,32 +71,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     new String[]{Manifest.permission.SEND_SMS}, SMS_REQ_CODE);
         }
 
-        //Test
-//        GoogleApiClient apiClient = new GoogleApiClient.Builder(this)
-//                .addConnectionCallbacks((GoogleApiClient.ConnectionCallbacks) this)
-//                .addOnConnectionFailedListener((GoogleApiClient.OnConnectionFailedListener) this)
-//                .addApi(LocationServices.API)
-//                .build();
-//        apiClient.isConnected();
-//        LocationRequest locReq = new LocationRequest().setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-//        LocationListener listener = new LocationListener() {
-//            @Override
-//            public void onLocationChanged(Location location) {
-//
-//            }
-//        };
-//        LocationServices.FusedLocationApi.requestLocationUpdates(apiClient,locReq,listener);
-//        Location location = LocationServices.FusedLocationApi.getLastLocation(apiClient);
-//        if(location==null){
-//            // TODO requestLocationUpdates
-//        }
-//        double longt = location.getLongitude();
-//        double langt = location.getLatitude();
-//        double alt = location.getAltitude();
-//        String incident = "Incident at Long(" + longt + "), Lang(" + langt + ") & alt(" + alt + ")";
-//        Log.v("test", incident);
-        //Test
-
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter==null){
             Log.e("no bt","no bt");
@@ -98,28 +80,109 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             Intent enableBlueTooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBlueTooth,BLUETOOTH_ENABLE_CODE);
         }
+
         // Bluetooth is now enabled above
-        BluetoothDevice device = null;
+        BluetoothDevice device=null;
         try {
             String s = bluetoothActions(bluetoothAdapter);
-            // TODO use string, device = bluetoothActions(bluetoothAdapter);
+            device = bluetoothAdapter.getRemoteDevice(s);
         }
         catch (Exception e){
             Log.e("Not found","Not found");
         }
         PowerManager mgr = (PowerManager) getSystemService(Context.POWER_SERVICE);
         PowerManager.WakeLock wakeLock = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyWakeLock");
-        if(device!=null){
 
+        BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback(){
+
+            @Override
+            public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+                Log.d("1","1");
+            }
+
+            public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+                Log.d("1","1");
+
+                BluetoothGattService service = gatt.getService(UUID.fromString(SERVICE_UUID));
+
+                BluetoothGattCharacteristic read = service.getCharacteristic(UUID.fromString(READ_UUID));
+                gatt.setCharacteristicNotification(read,true);
+
+
+                BluetoothGattCharacteristic write = service.getCharacteristic(UUID.fromString(WRITE_UUID));
+                int i =write.getProperties();
+                write.setWriteType(2);
+                write.setValue("start");
+                gatt.writeCharacteristic(write);
+                Log.d("Done","Done");
+            }
+
+            public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+                Log.d("1","1");
+            }
+
+            public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+                Log.d("1","1");
+            }
+
+            public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+                Log.d("1","1");
+            }
+
+            public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+                Log.d("1","1");
+            }
+
+            public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+                Log.d("1","1");
+            }
+
+            public void onReliableWriteCompleted(BluetoothGatt gatt, int status) {
+                Log.d("1","1");
+            }
+
+            public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
+                Log.d("1","1");
+            }
+
+            public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
+                Log.d("1","1");
+            }
+
+        };
+        BluetoothGatt btGatt = null;
+        if(device!=null) {
+            btGatt = device.connectGatt(this, false, bluetoothGattCallback);
         }
+        else {
+            Log.d("Error","No Device");
+            return;
+        }
+        try {
+            btGatt.connect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         // Declare emergencyOccurenceService
-        while(termination){
+        /*while(! termination){
             wakeLock.acquire();
 //            Intent intent = new Intent(Intent.)
             // Get Data from BluetoothDevice
+            btGatt.readCharacteristic(read);
+            byte[] value = read.getValue();
+            // String readPastTense = read.getStringValue(0); // Is this null?
+            Log.d("Test","Test");
             // If data ! null, Do code here for if incident happens
+            // Write Data to text file for research !!
             wakeLock.release();
-        }
+            try {
+                wait(WAITING_TIME);
+            }
+            catch (InterruptedException e){
+                Log.e("Error","Time Interrupted");
+            }
+        }*/
     }
 
     @Override
@@ -201,10 +264,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         }
     };
-
-    private void connect(BluetoothAdapter bluetoothAdapter, String address){
-
-    }
 
     @Override
     public void onConnected(@Nullable Bundle bundle) {
