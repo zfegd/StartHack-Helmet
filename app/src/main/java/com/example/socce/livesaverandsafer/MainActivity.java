@@ -35,7 +35,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -48,6 +50,9 @@ public class MainActivity extends AppCompatActivity {
     final int SMS_REQ_CODE = 535;
     static boolean termination;
     private final String judgeNo = "tel:+4915120774296";
+
+    private List<String> volvoChallenge = new ArrayList<>();
+    private List<String> generalChallenge = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,9 +84,12 @@ public class MainActivity extends AppCompatActivity {
         }
         if(myDatagramReceiver.getMessage().equals("hello")){
             SmsManager manager = SmsManager.getDefault();
-            manager.sendTextMessage(judgeNo,null,"Incident at St Gallen University",null,null);
+            manager.sendTextMessage("tel:+972522821752",null,"Incident at St Gallen University",null,null);
+            manager.sendTextMessage("tel:+447936619937",null,"Incident at St Gallen University",null,null);
+            manager.sendTextMessage("tel:+972545877122",null,"Incident at St Gallen University",null,null);
+            manager.sendTextMessage("tel:+972504392880",null,"Incident at St Gallen University",null,null);
 
-            Intent calling = new Intent(Intent.ACTION_CALL, Uri.parse(judgeNo));
+            Intent calling = new Intent(Intent.ACTION_CALL, Uri.parse("tel:+972522821752"));
             startActivity(calling);
 
             System.exit(0);
