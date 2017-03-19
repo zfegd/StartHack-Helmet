@@ -15,6 +15,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.location.Location;
 import android.net.Uri;
 import android.os.PowerManager;
 import android.support.annotation.NonNull;
@@ -28,6 +29,7 @@ import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.RuntimeExecutionException;
 
 import java.io.IOException;
@@ -48,10 +50,10 @@ public class MainActivity extends AppCompatActivity {
     final int LOC_REQ_CODE = 42;
     final int PHONE_REQ_CODE = 999;
     final int SMS_REQ_CODE = 535;
-    static boolean termination;
-    private final String judgeNo = "tel:+4915120774296";
+    private final String placeholderNo = "tel:+46123456789";
 
     private List<String> volvoChallenge = new ArrayList<>();
+
     private List<String> generalChallenge = new ArrayList<>();
 
     @Override
@@ -75,6 +77,13 @@ public class MainActivity extends AppCompatActivity {
                     new String[]{Manifest.permission.SEND_SMS}, SMS_REQ_CODE);
         }
 
+        //Test
+//        Locator loc = new Locator();
+//        loc.locate();
+//        Location location = loc.getmLocation();
+//        Log.v(location.toString(),location.toString());
+        //EndTest
+
         myDatagramReceiver = new MyDatagramReceiver();
         myDatagramReceiver.start();
         try {
@@ -84,55 +93,21 @@ public class MainActivity extends AppCompatActivity {
         }
         if(myDatagramReceiver.getMessage().equals("hello")){
             SmsManager manager = SmsManager.getDefault();
-            manager.sendTextMessage("tel:+972522821752",null,"Incident at St Gallen University",null,null);
-            manager.sendTextMessage("tel:+447936619937",null,"Incident at St Gallen University",null,null);
-            manager.sendTextMessage("tel:+972545877122",null,"Incident at St Gallen University",null,null);
-            manager.sendTextMessage("tel:+972504392880",null,"Incident at St Gallen University",null,null);
+            manager.sendTextMessage(placeholderNo,null,"Incident at St Gallen University",null,null);
 
-            Intent calling = new Intent(Intent.ACTION_CALL, Uri.parse("tel:+972522821752"));
+//            for(String judge : volvoChallenge){
+//                manager.sendTextMessage(judge,null,"Incident at St Gallen University! Please send help!",null,null);
+//            }
+
+            Intent calling = new Intent(Intent.ACTION_CALL, Uri.parse(placeholderNo));
             startActivity(calling);
-
-            System.exit(0);
         }
-
-//        PowerManager mgr = (PowerManager) getSystemService(Context.POWER_SERVICE);
-//        PowerManager.WakeLock wakeLock = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyWakeLock");
-//        EmergencyOccurenceService eos = new EmergencyOccurenceService();
-//        wakeLock.acquire();
-//        while(! termination){
-//            // Get Data from BluetoothDevice
-//            if(dataAffirmative){
-//                eos.onHandleIntent(new Intent("Accident"));
-//            }
-//            try {
-//                wait(WAITING_TIME);
-//            }
-//            catch (InterruptedException e){
-//                Log.e("Error","Time Interrupted");
-//            }
-//            if(Math.random()>0.87){
-//                dataAffirmative = true;
-//            }
-//        }
-//        wakeLock.release();
     }
 
     private MyDatagramReceiver myDatagramReceiver = null;
 
     protected void onResume() {
         super.onResume();
-//        myDatagramReceiver = new MyDatagramReceiver();
-//        myDatagramReceiver.start();
-//        try {
-//            myDatagramReceiver.join();
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-//        if(myDatagramReceiver.getMessage().equals("Hello")){
-//            SmsManager manager = SmsManager.getDefault();
-//            manager.sendTextMessage("+972545877122",null,"incident",null,null);
-//            Log.v("Sent","Success");
-//        }
     }
 
     protected void onPause() {
